@@ -1,7 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 
-import igballs_functions 
+import igballs_balls 
 
 def create_figure(
     strike_angle_deg: float,
@@ -57,7 +57,7 @@ def create_figure(
     i, j, k = zip(*faces)
 
     center = (p1 + p3) / 2
-    beachball_plot = igballs_functions.create_beach_ball(
+    beachball_plot = igballs_balls.create_beach_ball(
         center, strike_vec, dip_vec, normal_vec
     )
 

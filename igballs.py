@@ -23,3 +23,5 @@ eye_dict = dict(x=-1, y=-3, z=2) ###x: este - oest, y: norte-sur, z: altura
 
 fig = igballs_fault.create_figure(strike_angle_deg, dip_angle_deg, rake_angle_deg)
 fig.show()
+
+
