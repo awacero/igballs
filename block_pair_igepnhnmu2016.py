@@ -4,60 +4,7 @@ import plotly.graph_objects as go
 from scipy.spatial.transform import Rotation as R
 
 
-
-
-def create_colored_quadrants_from_meridians(center, strike_vec, dip_vec, normal_vec,
-                                             radius=2.5, resolution=300):
-    import numpy as np
-    import plotly.graph_objects as go
-
-    # Malla esférica
-    u = np.linspace(0, 2 * np.pi, resolution)
-    v = np.linspace(0, np.pi, resolution)
-    u, v = np.meshgrid(u, v)
-
-    x = np.sin(v) * np.cos(u)
-    y = np.sin(v) * np.sin(u)
-    z = np.cos(v)
-    xyz = np.stack([x, y, z], axis=-1).reshape(-1, 3)
-
-    # Sistema local (X = strike, Y = dip, Z = normal)
-    v1 = strike_vec / np.linalg.norm(strike_vec)
-    v2 = dip_vec / np.linalg.norm(dip_vec)
-    v3 = normal_vec / np.linalg.norm(normal_vec)
-
-    local_basis = np.vstack([v1, v2, v3]).T  # 3x3
-
-    # Rotar cada punto al sistema local del plano
-    xyz_local = xyz @ local_basis  # N x 3
-
-    # Ahora clasificamos los cuadrantes:
-    # Signo de Y_local y Z_local define los cuadrantes
-    y_l = xyz_local[:, 1]
-    z_l = xyz_local[:, 2]
-
-    # Colorear según cuadrante
-    # (Compresión = azul, Dilatación = blanco)
-    colors = np.where((y_l * z_l) > 0, 0, 1)  # Mismo signo → compresión
-
-    # Redimensionar y trasladar
-    x_final = x.reshape(v.shape) * radius + center[0]
-    y_final = y.reshape(v.shape) * radius + center[1]
-    z_final = z.reshape(v.shape) * radius + center[2]
-    color_final = colors.reshape(v.shape)
-
-    # Superficie
-    return go.Surface(
-        x=x_final, y=y_final, z=z_final,
-        surfacecolor=color_final,
-        colorscale=[[0, 'blue'], [1, 'white']],
-        cmin=0, cmax=1,
-        showscale=False,
-        opacity=1.0,
-        name='Beachball'
-    )
-
-
+import igballs_balls
 
 
 # Parámetros
@@ -71,9 +18,8 @@ steps = 25
 slip_cuña_width = 10
 slip_cuña_height = 5
 slip_cuña_depth = 5
-###x: este - oest, y: norte-sur, z: altura
+eye_dict = dict(x=-1, y=-3, z=2) ###x: este - oest, y: norte-sur, z: altura
 
-eye_dict = dict(x=-1, y=-3, z=2)
 # Conversión de ángulos
 strike_rad = np.radians(strike_angle_deg)
 dip_rad = np.radians(dip_angle_deg)
@@ -121,13 +67,10 @@ faces = [
 i, j, k = zip(*faces)
 
 
-##Create beach ball
-
-#beachball_plot = create_focal_sphere(strike_angle_deg,dip_angle_deg,rake_angle_deg,center=(0,-2,2),radius=2.0)
 
 center = (p1 + p3) / 2
 
-beachball_plot = create_colored_quadrants_from_meridians(center,strike_vec,dip_vec,normal_vec)
+beachball_plot = igballs_balls.create_beach_ball(center,strike_vec,dip_vec,normal_vec)
 
 # Cuña inferior
 wedge = go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, color='sienna', opacity=0.6, name='Placa inferior')
@@ -283,9 +226,6 @@ layout = go.Layout(
     ),
     scene=dict(
         
-        #xaxis_title='Este',
-        #yaxis_title='Norte',
-        #zaxis_title= 'Profundidad',
         xaxis=dict(
             title='Longitud (°)',
             tickvals=[-5, 0, 5],

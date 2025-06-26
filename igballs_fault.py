@@ -7,15 +7,14 @@ def create_figure(
     strike_angle_deg: float,
     dip_angle_deg: float,
     rake_angle_deg: float,
+    width: float,
+    height: float,
+    steps: int,
+    eye_dict = dict
+
 ) -> go.Figure:
     """Create the 3D figure showing the fault model."""
-    width = 10
-    height = 5
-    steps = 25
-    slip_cuna_width = 10
-    slip_cuna_height = 5
-    eye_dict = dict(x=-1, y=-3, z=2)
-
+    
     strike_rad = np.radians(strike_angle_deg)
     dip_rad = np.radians(dip_angle_deg)
     rake_rad = np.radians(rake_angle_deg)
@@ -120,12 +119,12 @@ def create_figure(
         else:
             q1 = p1 * plane_normal + slip_vec * (step * 0.1)
 
-        q2 = q1 + slip_cuna_width * v1
-        q3 = q2 + slip_cuna_height * v2
-        q4 = q1 + slip_cuna_height * v2
+        q2 = q1 + width * v1
+        q3 = q2 + height * v2
+        q4 = q1 + height * v2
 
-        q5 = np.array([q1[0] - slip_cuna_width, q1[1], q1[2]])
-        q6 = np.array([q2[0] - slip_cuna_width, q2[1], q2[2]])
+        q5 = np.array([q1[0] - width, q1[1], q1[2]])
+        q6 = np.array([q2[0] - width, q2[1], q2[2]])
         q7 = np.array([q6[0], q6[1], q3[2]])
         q8 = np.array([q5[0], q5[1], q4[2]])
 
