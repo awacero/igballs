@@ -50,22 +50,3 @@ def create_beach_ball(center, strike_vec, dip_vec, normal_vec,
         name='Beachball'
     )
 
-'''
-
-fig = go.Figure()
-
-# Right‑lateral, vertical fault (strike 0°, dip 90°, rake 180°)
-strike = np.array([1, 0, 0])
-dip    = np.array([0, 0, -1])
-normal = np.cross(strike, dip)          # [0, 1, 0]
-
-fig.add_trace(create_beach_ball(center=[0,0,0],
-                                strike_vec=strike,
-                                dip_vec=dip,
-                                normal_vec=normal,
-                                rake_deg=180,
-                                radius=2.5))
-
-fig.update_layout(scene_aspectmode='data'); fig.show()
-
-'''

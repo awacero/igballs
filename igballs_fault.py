@@ -95,6 +95,7 @@ def create_figure(
     slip_vector = np.cos(rake_rad) * strike_unit + np.sin(rake_rad) * dip_unit
     slip_unit = slip_vector / np.linalg.norm(slip_vector)
 
+
     """Create static objects"""
     """Create compass rose"""
     # Escalas en grados (aprox. 1° latitud ≈ 111 km)
@@ -119,7 +120,7 @@ def create_figure(
         center, strike_unit, dip_unit, normal_unit, rake_angle_deg,radius, resolution,invert_colors   )
 
 
-
+    """Create a cool fault plane"""
     # --- Cálculo de los 4 vértices del plano (rectángulo) ------------------
     half_s   = 0.5 * plane_factor * strike_vector   # vector mitad‑long. (strike)
     half_d   = 0.5 * plane_factor * dip_vector      # vector mitad‑anch. (dip)
@@ -142,21 +143,61 @@ def create_figure(
 )
 
 
-    static_traces = [plane,beachball_plot,ns_line,ew_line,norte_flecha]
 
-    '''
-    plane = go.Mesh3d(
-        x=[p1[0], p2[0], p3[0], p4[0]],
-        y=[p1[1], p2[1], p3[1], p4[1]],
-        z=[p1[2], p2[2], p3[2], p4[2]],
-        i=[0, 0],
-        j=[1, 3],
-        k=[2, 2],
-        color="gray",
-        opacity=0.7,
-        name="Plano de falla",
+
+    # ---------- Parámetros ----------
+    arrow_len     = 0.7 * radius     # km   (largura del vector)
+    arrow_radius  = 0.5 * radius    # km   (grosor del cono)
+    arrow_color   = "red"
+    arrow_offset  = 1.3 * radius     # km   (separación del plano)
+
+    # Posición de las colas (± normal)
+    tail1 = center +  normal_vector * arrow_offset
+    tail2 = center -  normal_vector * arrow_offset
+
+    # Componentes del vector deslizamiento, escalado a arrow_len
+    slip_unit = slip_vector / np.linalg.norm(slip_vector)
+    u, v, w = (slip_unit * arrow_len)
+
+
+    if move_block.lower() == "east":
+        dir_plus, dir_minus = -slip_unit,  slip_unit
+    elif move_block.lower() == "west":
+        dir_plus, dir_minus =  slip_unit, -slip_unit
+    else:                           # ambos fijos: muestra deslizamiento relativo
+        dir_plus, dir_minus =  slip_unit, -slip_unit
+
+    u1, v1, w1 = (dir_plus  * arrow_len)
+    u2, v2, w2 = (dir_minus * arrow_len)
+
+
+
+    # --------- Flecha bloque 1  (se mueve +slip) ----------
+    arrow1 = go.Cone(
+        x=[tail1[0]], y=[tail1[1]], z=[tail1[2]],
+        u=[ u1], v=[ v1], w=[ w1],
+        anchor="tail",              # la cola está en (x,y,z)
+        sizemode="absolute",
+        sizeref=arrow_len,
+        showscale=False,
+        colorscale=[[0, arrow_color], [1, arrow_color]],
+        name="Desplazamiento 1"
     )
-    '''
+
+    # --------- Flecha bloque 2  (‑slip) ----------
+    arrow2 = go.Cone(
+        x=[tail2[0]], y=[tail2[1]], z=[tail2[2]],
+        u=[u2], v=[v2], w=[w2],
+        anchor="tail",
+        sizemode="absolute",
+        sizeref=arrow_len,
+        showscale=False,
+        colorscale=[[0, arrow_color], [1, arrow_color]],
+        name="Desplazamiento 2"
+    )
+
+
+    static_traces = [arrow1, arrow2, beachball_plot,  plane,ns_line,ew_line,norte_flecha]
 
 
     ##BORRAR
@@ -252,12 +293,6 @@ def create_figure(
             name="block_east_upper"
         )
 
-
-
-        ##BLOCK WEST
-        #q2 = q1 + width * v1
-        #q3 = q2 + height * v2
-        ##q4 = q1 + height * v2
         q2 = q1 + strike_vector
         q3 = q2 + dip_vector
         q4 = q1 + dip_vector
@@ -266,14 +301,6 @@ def create_figure(
         q8 = q4 - normal_proj*width
         q5 = q8 - dip_proj*height
         q6 = q7 - dip_proj*height
-        """
-        q5 = q1 - normal_unit*width
-        q6 = q2 - normal_unit*width
-        q7 = q3 - normal_unit*width
-        q8 = q4 - normal_unit*width
-        """
-
-
 
         vertices_q = np.array([q1,q2,q3,q4,q5,q6,q7,q8])
         xq,yq,zq = vertices_q.T
@@ -286,16 +313,11 @@ def create_figure(
             name="block_west",
         )
 
-        ##BLOCK WEST UPPER
-        #q1u = q1 + np.array([0,0,altura_total/3])
-        #q2u = q1u + strike_vector
-        
+
         q1u = q1 - dip_vector/3
         q2u = q2 - dip_vector/3
         q3u = q2
         q4u = q1
-        #q5u = np.array([q1u[0] - width,q1u[1],q1u[2]])
-        #q6u = np.array([q2u[0] - width,q2u[1],q2u[2]])
         q5u = q5 - dip_proj*height/3
         q6u = q6 - dip_proj*height/3
         q7u = q6
@@ -428,6 +450,7 @@ def create_figure(
         layout=layout,
         frames=frames,
     )
+
 
     fig.update_layout(
     modebar=dict(

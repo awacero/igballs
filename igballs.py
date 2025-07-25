@@ -6,6 +6,7 @@ import logging
 
 import igballs_fault
 import json
+import pprint
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ def load_config(cfg_path: str) -> dict:
     config = configparser.ConfigParser()
     config.read(cfg_path)
 
-    import pprint
+    
     pprint.pprint({s: dict(config.items(s)) for s in config.sections()})
     eye_dict_raw = json.loads( config["ANIMATION"]["eye_dict"])
     eye_dict = {k: float(v) for k, v in eye_dict_raw.items()}
