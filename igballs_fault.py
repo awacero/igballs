@@ -66,7 +66,7 @@ def create_figure(
     longitude: float,
     depth: float,
     move_block: str,
-    width: float,
+    block_width: float,
     height: float,
     steps: int,
     eye_dict : dict,
@@ -87,7 +87,7 @@ def create_figure(
         -np.sin(strike_rad) * np.cos(dip_rad),
         -np.sin(dip_rad),
     ])
-    strike_vector = width * strike_unit
+    strike_vector = block_width * strike_unit
     dip_vector = height * dip_unit
     normal_vector = np.cross(strike_unit, dip_unit)
     normal_unit = normal_vector / np.linalg.norm(normal_vector)
@@ -198,19 +198,7 @@ def create_figure(
 
 
     static_traces = [arrow1, arrow2, beachball_plot,  plane,ns_line,ew_line,norte_flecha]
-
-
-    ##BORRAR
-    plane_normal = np.cross(strike_unit, dip_unit)
-    plane_normal /= np.linalg.norm(plane_normal)
-
-    v1 = strike_unit / np.linalg.norm(strike_unit)
-    v2 = np.cross(plane_normal, v1)
-    ##BORRAR
-
-
-    altura_total = abs(dip_vector[2])  # componente vertical del buzamiento 
-
+    #static_traces = []
     faces = [
             [0, 1, 2], [0, 2, 3],
             [4, 5, 6], [4, 6, 7],
@@ -219,9 +207,6 @@ def create_figure(
             [2, 3, 7], [2, 7, 6],
             [3, 0, 4], [3, 4, 7],
         ]
-
-    print("#####")
-    print(normal_unit)
 
     # Proyección escalar del vector normal sobre cada eje
     proj_x = np.dot(normal_unit, [1, 0, 0])
@@ -239,37 +224,44 @@ def create_figure(
     frames = []
     for step in range(steps):      
 
-        #p1 = origin - 0.5 * strike_vector - 0.5 * dip_vector
-
         if step == 0:
             p1 = origin - 0.5 * strike_vector - 0.5 * dip_vector
             q1 = p1
         else:
             if move_block == "east":
-                p1 = (origin - 0.5 * strike_vector - 0.5 * dip_vector) - slip_unit * (step * 0.33)
+                p1 = (origin - 0.5 * strike_vector - 0.5 * dip_vector) + slip_unit * (step * 0.22)
+                q1 = p1 - 2*slip_unit * (step * 0.22)
             elif move_block == "west":
-                q1 = p1 + slip_unit * (step * 0.33)
+                q1 = p1 - slip_unit * (step * 0.33)
             else:  # "none"
                 q1 = p1
         
         ##BLOCK EAST
         p2 = p1 + strike_vector
         p3 = p2 + dip_vector
-        p4 = p1 + dip_vector
-        # Cara inferior (hacia profundidad, en dirección del vector normal)
-                
-        p7 = p3 + normal_proj*width
-        p8 = p4 + normal_proj*width
+        p4 = p1 + dip_vector  
+        ##Here is the error 
+        #p7 = p3 + normal_proj*block_width*1.5
+        #p8 = p4 + normal_proj*block_width*1.5
+        #alpha = np.arccos(p1[0]/)
+        aux = p2 -p3 
+        p7 = np.array([p3[0]+aux[0], p3[1]+aux[1],p3[2]]) + normal_proj*block_width
+        p8 = np.array([p4[0]+aux[0], p4[1]+aux[1],p4[2]]) + normal_proj*block_width
         p5 = p8 - dip_proj * height
         p6 = p7 - dip_proj * height
 
+        print("###")
+        print(f"p3:{p3}")
+        print(f"p7:{p7}")
+        print(f"p2-p3:{p3-p2}")
+        #print(p2,p3,p4)
 
         vertices = np.array([p1, p2, p3, p4, p5, p6, p7, p8])
         x, y, z = vertices.T
         i, j, k = zip(*faces)
 
         block_east = go.Mesh3d(
-            x=x, y=y, z=z, i=i, j=j, k=k, color="sandybrown", opacity=0.6,
+            x=x, y=y, z=z, i=i, j=j, k=k, color="steelblue", opacity=0.6,
             name="block_east",
         )
 
@@ -297,8 +289,8 @@ def create_figure(
         q3 = q2 + dip_vector
         q4 = q1 + dip_vector
 
-        q7 = q3 - normal_proj*width
-        q8 = q4 - normal_proj*width
+        q7 = q3 - normal_proj*block_width
+        q8 = q4 - normal_proj*block_width
         q5 = q8 - dip_proj*height
         q6 = q7 - dip_proj*height
 
@@ -309,7 +301,7 @@ def create_figure(
         block_west = go.Mesh3d(
             x=xq, y=yq, z=zq,
             i=iq, j=jq, k=kq,
-            color="steelblue", opacity=0.666,
+            color="sandybrown", opacity=0.666,
             name="block_west",
         )
 
@@ -334,7 +326,10 @@ def create_figure(
         )
 
         frames.append(
-            go.Frame(data=[block_east, block_west, block_east_upper, block_west_upper], name=f"frame{step}")
+            go.Frame(data=[block_east, block_west, 
+                           block_east_upper, 
+                           block_west_upper
+                           ], name=f"frame{step}")
         )
 
         # Create annotations for points p1 to p8
@@ -411,9 +406,9 @@ def create_figure(
             annotations= 
             #annotations_p +
             #annotations_pu +
-            [
-                dict(x=p1[0], y=p1[1], z=p1[2], text="PLACA SUDAMERICANA", showarrow=False, font=dict(color="black", size=16)),
-                dict(x=q1[0] - 2, y=q1[1], z=q1[2] - 4, text="PLACA NAZCA", showarrow=False, font=dict(color="black", size=16)),
+            [   ##POSICION DE ETIQUETAS 
+                dict(x=p7[0], y=p7[1], z=p7[2], text="PLACA NAZCA", showarrow=False, font=dict(color="black", size=16)),
+                dict(x=q7[0], y=q7[1], z=q7[2], text="PLACA SUDAMERICA", showarrow=False, font=dict(color="black", size=16)),
             ],
         ),
         annotations= 
@@ -446,7 +441,10 @@ def create_figure(
 
 
     fig = go.Figure(
-        data= [initial_block_east, initial_block_west, initial_block_east_upper,  initial_block_west_upper] + static_traces,
+        data= [initial_block_east, initial_block_west, 
+               initial_block_east_upper,  
+               initial_block_west_upper
+               ] + static_traces,
         layout=layout,
         frames=frames,
     )
