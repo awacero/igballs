@@ -201,7 +201,7 @@ def create_figure(
         i=[0, 0], j=[1, 3], k=[2, 2],                # dos triángulos
         color=plane_color,
         opacity=plane_opacity,
-        name="Plano de falla",
+        name="Plano de falla",hoverinfo="none",
         flatshading=True,
 )
 
@@ -319,7 +319,7 @@ def create_figure(
 
         block_east = go.Mesh3d(
             x=x, y=y, z=z, i=i, j=j, k=k, color="steelblue", opacity=0.6,
-            name="block_east",
+            name="block_east",hoverinfo="none"
         )
 
         ##BLOCK EAST UPPER
@@ -340,6 +340,7 @@ def create_figure(
             x=xu, y=yu, z=zu, i=iu, j=ju, k=ku,
             color="peru", opacity=0.7,
             name="block_east_upper"
+            ,hoverinfo="none"
         )
 
         q2 = q1 + strike_vector
@@ -359,7 +360,7 @@ def create_figure(
             x=xq, y=yq, z=zq,
             i=iq, j=jq, k=kq,
             color="sandybrown", opacity=0.666,
-            name="block_west",
+            name="block_west",hoverinfo="none"
         )
 
 
@@ -379,7 +380,7 @@ def create_figure(
         block_west_upper = go.Mesh3d(
             x=xqu, y=yqu, z=zqu, i=iuq, j=juq, k=kuq,
             color="peru", opacity=0.7,
-            name="block_west_upper"
+            name="block_west_upper",hoverinfo="none"
         )
 
         frames.append(
