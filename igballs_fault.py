@@ -1,8 +1,53 @@
 import numpy as np
 import plotly.graph_objects as go
-
 import igballs_balls 
 
+import pandas as pd
+import plotly.graph_objects as go
+
+def add_coastlines_from_csv(fig, csv_path):
+    """
+    Agrega líneas costeras desde un archivo CSV (latitud, longitud) a la figura 3D.
+
+    Args:
+        fig: objeto plotly.graph_objects.Figure
+        csv_path: ruta al archivo CSV con columnas latitud, longitud
+    """
+    try:
+        df = pd.read_csv(csv_path)
+        if df.empty:
+            print("El archivo CSV está vacío.")
+            return
+
+        # Agrupar por NaNs para separar segmentos
+        mask = df['latitud'].isna()
+        segments = []
+        current = []
+
+        for i, row in df.iterrows():
+            if mask[i]:
+                if current:
+                    segments.append(current)
+                    current = []
+            else:
+                current.append((row['latitud'], row['longitud']))
+        if current:
+            segments.append(current)
+
+        # Dibujar segmentos
+        for segment in segments:
+            lats, lons = zip(*segment)
+            fig.add_trace(go.Scatter3d(
+                x=lons,
+                y=lats,
+                z=[0] * len(lats),  # z=0 para proyectar en superficie
+                mode='lines',
+                line=dict(color='black', width=4),
+                name='Coastline'
+            ))
+
+    except Exception as e:
+        print(f"Error al cargar el archivo de líneas costeras: {e}")
 
 def crear_cruz_direcciones(latitude, longitude, depth, cross_shift=10, cross_lat=5, cross_lon=5):
     """
@@ -57,18 +102,25 @@ def crear_cruz_direcciones(latitude, longitude, depth, cross_shift=10, cross_lat
 
     return ns_line, ew_line, norte_flecha
 
-
-def create_figure(
-    strike_angle_deg: float,
-    dip_angle_deg: float,
-    rake_angle_deg: float,
+    '''
+    strike_deg: float,
+    dip_deg: float,
+    rake_deg: float,
     latitude: float,
     longitude: float,
     depth: float,
+    plate_a: str,
+    plate_b: str,
+    '''
+
+def create_figure(
+    event: dict,
+    plane: str,
     move_block: str,
     block_width: float,
     height: float,
     steps: int,
+    speed: float,
     eye_dict : dict,
     radius: float,
     resolution: int,
@@ -76,10 +128,18 @@ def create_figure(
     ) -> go.Figure:
 
     """Load parameters"""
-    origin = np.array([latitude,longitude,depth])    
-    strike_rad = np.radians(strike_angle_deg)
-    dip_rad = np.radians(dip_angle_deg)
-    rake_rad = np.radians(rake_angle_deg)
+    event_title = event["title"]
+    event_datetime = event["datetime"]
+    event_magnitude = event["magnitude"]
+    latitude,longitude,depth = event['latitude'],event['longitude'],event['depth']
+    strike_deg,dip_deg,rake_deg = event['nodal_planes'][plane]['strike'], event['nodal_planes'][plane]['dip'],\
+                                    event['nodal_planes'][plane]['rake']
+    plate_a = event["plate_a"]
+    plate_b = event["plate_b"]
+    origin = np.array([latitude,longitude,depth])  
+    strike_rad = np.radians(strike_deg)
+    dip_rad = np.radians(dip_deg)
+    rake_rad = np.radians(rake_deg)
 
     strike_unit = np.array([np.sin(strike_rad), np.cos(strike_rad), 0])
     dip_unit = np.array([
@@ -111,13 +171,16 @@ def create_figure(
 
     ns_line, ew_line, norte_flecha = crear_cruz_direcciones(latitude, longitude, depth,cross_shift, cross_lat,cross_lon)
 
+
+
+
     """Create beach ball"""
     bb1 = origin - 0.5 * strike_vector - 0.5 * dip_vector
     bb3 = origin + 0.5 * strike_vector - 0.5 * dip_vector
 
     center = (bb1 + bb3) / 2
     beachball_plot = igballs_balls.create_beach_ball(
-        center, strike_unit, dip_unit, normal_unit, rake_angle_deg,radius, resolution,invert_colors   )
+        center, strike_unit, dip_unit, normal_unit, rake_deg,radius, resolution,invert_colors   )
 
 
     """Create a cool fault plane"""
@@ -229,10 +292,10 @@ def create_figure(
             q1 = p1
         else:
             if move_block == "east":
-                p1 = (origin - 0.5 * strike_vector - 0.5 * dip_vector) + slip_unit * (step * 0.22)
-                q1 = p1 - 2*slip_unit * (step * 0.22)
+                p1 = (origin - 0.5 * strike_vector - 0.5 * dip_vector) + slip_unit * (step * speed)
+                q1 = p1 - 2*slip_unit * (step * speed)
             elif move_block == "west":
-                q1 = p1 - slip_unit * (step * 0.33)
+                q1 = p1 - slip_unit * (step * speed)
             else:  # "none"
                 q1 = p1
         
@@ -249,12 +312,6 @@ def create_figure(
         p8 = np.array([p4[0]+aux[0], p4[1]+aux[1],p4[2]]) + normal_proj*block_width
         p5 = p8 - dip_proj * height
         p6 = p7 - dip_proj * height
-
-        print("###")
-        print(f"p3:{p3}")
-        print(f"p7:{p7}")
-        print(f"p2-p3:{p3-p2}")
-        #print(p2,p3,p4)
 
         vertices = np.array([p1, p2, p3, p4, p5, p6, p7, p8])
         x, y, z = vertices.T
@@ -391,7 +448,7 @@ def create_figure(
     layout = go.Layout(
         showlegend=False,
         title=dict(
-            text="<b>M 7.8 - Terremoto de Perdernales, Manabí - Ecuador (2016)</b>",
+            text=f"<b>{event_title}</b>",
             x=0.5,
             font=dict(size=18),
         ),
@@ -407,8 +464,8 @@ def create_figure(
             #annotations_p +
             #annotations_pu +
             [   ##POSICION DE ETIQUETAS 
-                dict(x=p7[0], y=p7[1], z=p7[2], text="PLACA NAZCA", showarrow=False, font=dict(color="black", size=16)),
-                dict(x=q7[0], y=q7[1], z=q7[2], text="PLACA SUDAMERICA", showarrow=False, font=dict(color="black", size=16)),
+                dict(x=p7[0], y=p7[1], z=p7[2], text=f"{plate_a}", showarrow=False, font=dict(color="black", size=16)),
+                dict(x=q7[0], y=q7[1], z=q7[2], text=f"{plate_b}", showarrow=False, font=dict(color="black", size=16)),
             ],
         ),
         annotations= 
@@ -422,13 +479,11 @@ def create_figure(
                 showarrow=False,
                 align="left",
                 text=(
-                    "<b>Fecha:</b> 2016-04-16 23:58:36 UTC<br>"
-                    "<b>Ubicación:</b> 0.382°N, 79.922°W<br>"
-                    "<b>Profundidad:</b> 21.5 km<br>"
-                    "<b>Magnitud:</b> 7.8 Mw<br>"
-                    "<b>Momento:</b> 7.054×10²⁰ N·m<br>"
-                    f"<b>Plano Nodal 1:</b> Strike {strike_angle_deg}°, Dip {dip_angle_deg}°, Rake {rake_angle_deg}°<br>"
-                    "<b>Plano Nodal 2:</b> Strike 26°, Dip 16°, Rake 113°<br>"
+                    f"<b>Fecha:</b> {event_datetime} <br>"
+                    f"<b>Ubicación:</b>{longitude},{latitude} <br>"
+                    f"<b>Profundidad:</b> {depth}<br>"
+                    f"<b>Magnitud:</b> {event_magnitude}<br>"
+                    f"<b>Plano:</b> Strike {strike_deg}°, Dip {dip_deg}°, Rake {rake_deg}°<br>"
                 ),
                 font=dict(size=15),
                 bordercolor="black",
@@ -448,7 +503,6 @@ def create_figure(
         layout=layout,
         frames=frames,
     )
-
 
     fig.update_layout(
     modebar=dict(

@@ -44,3 +44,14 @@ Use `--log-level DEBUG` for verbose output. When executed successfully, a Plotly
 ## Example
 
 Running the configuration above will produce an interactive 3D scene with the fault plane, beachball and moving block. (A screenshot can be added here in the future.)
+
+
+## References
+
+The coastline were downloaded from: https://www.marineregions.org/gazetteer.php?p=details&id=36309 on format GML3.  
+
+### TO DO
+
+```
+Add the earthquake information as a json or dict python with info 
+```

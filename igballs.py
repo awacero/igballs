@@ -10,6 +10,12 @@ import pprint
 
 logger = logging.getLogger(__name__)
 
+def load_event_json(event_path: str) -> dict:
+    """Load earthquake event data from a JSON file."""
+    with open(event_path, 'r') as f:
+        event = json.load(f)
+    logger.info("Evento sísmico cargado desde %s", event_path)
+    return event
 
 def load_config(cfg_path: str) -> dict:
     """Load configuration parameters from a cfg file."""
@@ -21,14 +27,8 @@ def load_config(cfg_path: str) -> dict:
     eye_dict_raw = json.loads( config["ANIMATION"]["eye_dict"])
     eye_dict = {k: float(v) for k, v in eye_dict_raw.items()}
 
-
     params = {
-        "strike_angle_deg": config.getfloat("FAULT", "strike_angle_deg", fallback=183),
-        "dip_angle_deg": config.getfloat("FAULT", "dip_angle_deg", fallback=75),
-        "rake_angle_deg": config.getfloat("FAULT", "rake_angle_deg", fallback=84),
-        "latitude" : config.getfloat("FAULT","latitude"),
-        "longitude" : config.getfloat("FAULT","longitude"),
-        "depth" : config.getfloat("FAULT","depth"),        
+        "plane": config.get("FAULT","plane",fallback="plane_1"),
         "width": config.getfloat("CUBE", "width", fallback=10),
         "height": config.getfloat("CUBE", "height", fallback=5),
         "radius": config.getfloat("BALL","radius",fallback=3.3),
@@ -36,6 +36,8 @@ def load_config(cfg_path: str) -> dict:
         "invert_colors": config.getboolean("BALL","invert_colors",fallback=False),
         "move_block" : config.get("ANIMATION","move_block", fallback="east"),        
         "steps": config.getint("ANIMATION", "steps", fallback=25),
+        "speed": config.getfloat("ANIMATION", "speed", fallback=0.333),
+
         "eye_dict":eye_dict,
         "output_html":config.get("ANIMATION","output_html",fallback="./moving_blocks.html")
         
@@ -53,8 +55,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--config",
-        default="igballs.cfg",
+        default="./config/igballs.cfg",
         help="Path to configuration file with fault parameters",
+    )
+    parser.add_argument(
+        "--event",
+        default="./data/event_igepn2016hnmu.json",
+        help="Path to configuration file with event parameters",
     )
     parser.add_argument(
         "--log-level",
@@ -70,17 +77,27 @@ def main() -> None:
     logger.info("Using configuration file %s", args.config)
     params = load_config(args.config)
 
+    event_data = load_event_json(args.event)
+    '''
+    params["strike_angle_deg"],
+    params["dip_angle_deg"],
+    params["rake_angle_deg"],
+    params["latitude"],
+    params["longitude"],
+    params["depth"],
+    params["plate_a"],
+    params["plate_b"],
+    '''
+
     fig = igballs_fault.create_figure(
-        params["strike_angle_deg"],
-        params["dip_angle_deg"],
-        params["rake_angle_deg"],
-        params["latitude"],
-        params["longitude"],
-        params["depth"],
+
+        event_data,
+        params["plane" ],
         params["move_block"],
         params["width"],
         params["height"],
         params["steps"],
+        params["speed"],
         params["eye_dict"],
         params["radius"],
         params["resolution"],
